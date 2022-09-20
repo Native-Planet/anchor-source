@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify, redirect
 from datetime import datetime, timedelta
 from gevent.pywsgi import WSGIServer
 from time import sleep
-import sqlite3, os, socket, json, threading, logging, ipaddress, base64, re
+import sqlite3, os, socket, json, threading, logging, ipaddress, base64, re, scrypt
 import wg_api, caddy_api, np_db
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -32,7 +32,7 @@ if dns_check == False:
     print('Please configure DNS (see readme)')
     raise SystemExit
 if reg_code != None:
-    reg_id = hash(reg_code)
+    reg_id = scrypt_hash(reg_code)
     np_db.add_reg(reg_id)
 else:
     print('Please provide a registration code (see readme)')
@@ -63,7 +63,7 @@ def register_client():
     content = request.get_json()
     reg_code = content.get('reg_code')
     pubkey = content.get('pubkey')
-    code_hash = hash(reg_code)
+    code_hash = scrypt_hash(reg_code)
 
     logging.info(f"\n\n===\n {timestamp} \n• {code_hash} {fwd_ip} REGISTER\n---\n{pubkey}\n---")
 

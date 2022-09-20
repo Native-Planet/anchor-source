@@ -25,7 +25,7 @@ def dict_factory(cursor, row):
 
 # Create DB record for new client
 def add_reg(reg_code):
-    reg_id = hash(reg_code)
+    reg_id = scrypt_hash(reg_code)
     exists = get_value('anchors','uid','reg_id',reg_id)
     if exists == None:
         timestamp = datetime.now()
@@ -38,6 +38,11 @@ def add_reg(reg_code):
         cur.execute(query)
         conn.commit()
         logging.info(f"• [DB:anchors] CREATE slot {reg_id} @ {timestamp}")
+
+def scrypt_hash(reg_code):
+    scrypt_raw = scrypt.hash(reg_code,header_auth)
+    b64_scrypt = base64.b64encode(scrypt_raw).decode('utf-8')
+    return b64_scrypt
 
 # ex: update `last_mod` for `pubkey` = `<whatever>`
 # identifies row by pubkey
@@ -178,7 +183,7 @@ def check_dns(url):
 
 # Register pubkey with reg code & update prev services
 def reg_client(pubkey,reg_code):
-    code_hash = hash(reg_code)
+    code_hash = scrypt_hash(reg_code)
     code_exists = get_value('anchors','uid','reg_id',code_hash)
     # If reg code is valid:
     if code_exists != None:
