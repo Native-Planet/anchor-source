@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from flask import request
 from time import sleep
-import sqlite3, random, os, json, base64, logging, requests, socket, threading, re
+import sqlite3, random, os, json, base64, logging
+import requests, socket, threading, re, scrypt
 import caddy_api, wg_api
 from requests import get
 
@@ -232,8 +233,6 @@ def rectify_svc_list(pubkey):
     svc_list, caddy_list = ['anchor'], []
     services, minios = {}, {}
     peerlist = wg_api.peer_list()
-    if wg_api.check_peer(pubkey) == True:
-        client = [pubkey]
     del_peers = []
     svcs = get_client_svcs(pubkey)
     peer_ip = wg_api.check_peer(pubkey)
@@ -241,6 +240,7 @@ def rectify_svc_list(pubkey):
     if peer_ip == False:
         wg_api.new_peer(pubkey=pubkey,label=None)
         peer_ip = wg_api.check_peer(pubkey)
+    client = [pubkey]
     exists_conf = get_value('anchors','conf','pubkey',pubkey)
     wg_conf = wg_api.get_conf(pubkey)
     if exists_conf != wg_conf:

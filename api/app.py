@@ -32,8 +32,7 @@ if dns_check == False:
     print('Please configure DNS (see readme)')
     raise SystemExit
 if reg_code != None:
-    reg_id = scrypt_hash(reg_code)
-    np_db.add_reg(reg_id)
+    np_db.add_reg(reg_code)
 else:
     print('Please provide a registration code (see readme)')
     raise SystemExit
@@ -63,7 +62,7 @@ def register_client():
     content = request.get_json()
     reg_code = content.get('reg_code')
     pubkey = content.get('pubkey')
-    code_hash = scrypt_hash(reg_code)
+    code_hash = np_db.scrypt_hash(reg_code)
 
     logging.info(f"\n\n===\n {timestamp} \n• {code_hash} {fwd_ip} REGISTER\n---\n{pubkey}\n---")
 
