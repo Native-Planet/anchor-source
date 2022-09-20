@@ -27,7 +27,7 @@ np_db.db.execute('CREATE TABLE IF NOT EXISTS services (uid INTEGER, \
             svc_type TEXT NULL, status TEXT NULL, created TIMESTAMP NULL, \
             last_mod TIMESTAMP NULL, PRIMARY KEY ("uid" AUTOINCREMENT) );')
 
-dns_check = np_db.check_dns(f'relay.{root_domain}')
+dns_check = np_db.check_dns(f'anchor.{root_domain}')
 if dns_check == False:
     print('Please configure DNS (see readme)')
     raise SystemExit
@@ -39,8 +39,8 @@ else:
     raise SystemExit
 
 # Register subdomain for node API
-if caddy_api.check_upstream(f'relay.{root_domain}','api:8090') != True:
-    caddy_api.add_reverse_proxy('relay', host=f'{root_domain}', upstream='api:8090')
+if caddy_api.check_upstream(f'anchor.{root_domain}','api:8090') != True:
+    caddy_api.add_reverse_proxy('anchor', host=f'{root_domain}', upstream='api:8090')
     sleep(3)
     caddy_api.add_502()
     if debug_db == 'true':

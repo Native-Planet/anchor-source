@@ -224,7 +224,7 @@ def rectify_svc_list(pubkey):
     '''
     no_proxy = ['urbit-ames','minio-console']
     caddy_conf = caddy_api.get_conf()['apps']['http']['servers']['srv0']['routes']
-    svc_list, caddy_list = ['relay'], []
+    svc_list, caddy_list = ['anchor'], []
     services, minios = {}, {}
     peerlist = wg_api.peer_list()
     if wg_api.check_peer(pubkey) == True:
@@ -258,8 +258,8 @@ def rectify_svc_list(pubkey):
                 upd_value('services','port','subdomain',subd)
             # Append to dictionary of all services
             # We don't want a reverse proxy for ames
-            if 'relay' not in services:
-                services['relay'] = 'api:8090'
+            if 'anchor' not in services:
+                services['anchor'] = 'api:8090'
             if (debug_db == 'true') and ('db' not in services):
                  services['db'] = 'dbweb:8080'
             if (svc_type not in no_proxy) and (port != None):

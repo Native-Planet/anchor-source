@@ -15,7 +15,7 @@ interface = 'wg0'
 root_domain = os.getenv('ROOT_DOMAIN')
 wc = wgconfig.WGConfig('/etc/wireguard/wg0.conf')
 subnet = ipaddress.ip_network('10.13.13.0/24')
-hosturl = f'relay.{root_domain}'
+hosturl = f'anchor.{root_domain}'
 
 # Generate the public key for the server's private key
 def wg_pubkey():
