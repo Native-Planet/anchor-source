@@ -193,7 +193,7 @@ def add_502():
                     )
                 ]
             )])
-    api(path='apps/http/servers/srv0/routes', method='POST', data=errors)
+    api(path='apps/http/servers/srv0/errors', method='POST', data=errors)
     return True
 
 # Basic API call pattern
