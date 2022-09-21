@@ -14,6 +14,7 @@ RUN chmod +x /usr/bin/caddy
 RUN apk add --no-cache libcap curl
 RUN setcap 'cap_net_bind_service=+ep' /usr/bin/caddy
 COPY ./default_config.json /etc/caddy/
+COPY ./www/502.html /www/
 RUN echo "#!/bin/ash" > /init
 RUN echo "ip route add 10.13.13.0/24 via 172.20.0.2" >> /init
 RUN echo "exec caddy run --config /etc/caddy/default_config.json --resume" >> /init
