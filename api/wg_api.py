@@ -164,3 +164,148 @@ def next_ip(pubkey):
         hosts_iterator = (host for host in subnet.hosts() if host not in ip_list)
         avail_ip = next(hosts_iterator)
         return ipaddress.ip_network(f'{avail_ip}/32')
+
+
+# Create iptables rule for direct port forwarding (Ames)
+def port_fwd(peer,port,protocol):
+    # Generate rules from templates
+    def rule_gen(rule,ad):
+        if ad == 'A':
+            prefix = 'PreUp'
+        elif ad == 'D':
+            prefix = 'PreDown'
+        else:
+            return False
+        fwd_rule = f'{prefix} = iptables -{ad} FORWARD -p \
+{protocol} -d {peer} --dport {port} -j ACCEPT\n'
+        preroute_rule = f'{prefix} = iptables -{ad} PREROUTING \
+-t nat -p {protocol} -i eth0 --dport {port} -j DNAT --to-destination \
+{peer}:{port}\n'
+        if rule == 'fwd':
+            return fwd_rule
+        elif rule == 'pre':
+            return preroute_rule
+        else:
+            return False
+    # No duplicates
+    exists = fwd_exists()
+    port = int(port)
+    if (protocol in exists.keys()) and (port not in exists[protocol].keys()):
+        logging.info(f'[WG]: Adding direct port forwarding for \
+{peer}:{port}/{protocol}')
+        with open("/etc/wireguard/wg0.conf", "r") as f:
+            contents = f.readlines()
+            for num, line in enumerate(contents, 1):
+                # Find the line number to insert PreUp rules
+                if 'PostUp' in line:
+                    index = num -1
+        pre = rule_gen('pre','A')
+        fwd = rule_gen('fwd','A')
+        contents.insert(index, pre)
+        contents.insert(index, fwd)
+        if (pre != False) and (fwd != False):
+            with open("/etc/wireguard/wg0.conf", "w") as f:
+                contents = "".join(contents)
+                f.write(contents)
+        else:
+            logging.warning(f'[WG]: Invalid routing rule')
+            return False
+        with open("/etc/wireguard/wg0.conf", "r") as f:
+            contents = f.readlines()
+            for num, line in enumerate(contents, 1):
+                # Find the line numbers to insert PreDown rules
+                if 'PostDown' in line:
+                    index = num - 1
+        pre = rule_gen('pre','D')
+        fwd = rule_gen('fwd','D')
+        contents.insert(index, pre)
+        contents.insert(index, fwd)
+        if (pre != False) and (fwd != False):
+            with open("/etc/wireguard/wg0.conf", "w") as f:
+                contents = "".join(contents)
+                f.write(contents)
+                return True
+        else:
+            logging.warning(f'[WG]: Invalid routing rule')
+            return False
+    # You still need to restart the interface
+
+# Remove a forwarding rule from WG conf
+def remove_fwd(port):
+    port = str(port)
+    logging.info(f'[WG]: Removing port forwarding for {port}')
+    lookup = f'dport {port}'
+    with open("/etc/wireguard/wg0.conf","r+") as f:
+        new_f = f.readlines()
+        f.seek(0)
+        for line in new_f:
+            if lookup not in line:
+                f.write(line)
+        f.truncate()
+    # You still need to restart the interface
+
+# Return a dict of all existing port forwards
+# {tcp:{port:peer,port:peer},udp:{port:peer}}
+def fwd_exists():
+    results = {'tcp':{},'udp':{}}
+    with open("/etc/wireguard/wg0.conf","r+") as f:
+        lines = f.readlines()
+        f.seek(0)
+        for line in lines:
+            if ('PreUp' in line) and ('FORWARD' in line):
+                match = '--dport'
+                before, _, after = line.partition(match)
+                protocol = before.split()[-3]
+                peer = before.split()[-1]
+                port = int(after.split()[0])
+                fwd = {port:peer}
+                results[protocol][port]=peer
+    return results
+
+# Compare dict of forwarded services vs existing forwards
+def rectify_port_fwd(fwd_input):
+    # {udp:{port:peer,port:peer},tcp:{port:peer}}
+    def port_list(port_input):
+        # Create lists of ports from fwd_input/fwd_exist
+        # We don't allow overlaps for tcp/udp numbers
+        result = []
+        if 'tcp' in port_input.keys():
+            result += list(port_input['tcp'].keys())
+        if 'udp' in port_input.keys():
+            result += list(port_input['udp'].keys())
+        return result
+    # Get existing fwds and make lists
+    fwd_exist = fwd_exists()
+    exist_list = port_list(fwd_exist)
+    input_list = port_list(fwd_input)
+    wg_mod = 0
+    try:
+        for protocol in fwd_input:
+            for port in fwd_input[protocol]:
+                # Add missing forwards
+                if (port in fwd_input[protocol].keys()) and \
+                (port not in fwd_exist[protocol].keys()):
+                    input_peer = fwd_input[protocol][port]
+                    port_fwd(input_peer,port,protocol)
+                    fwd_exist = fwd_exists()
+                    wg_mod = 1
+                # Fix erroneous existing forwards
+                if (port in exist_list) and \
+                (fwd_input[protocol][port] != fwd_exist[protocol][port]):
+                    input_peer = fwd_input[protocol][port]
+                    remove_fwd(port)
+                    port_fwd(input_peer,port,protocol)
+                    fwd_exist = fwd_exists()
+                    wg_mod = 1
+        # Delete old forwards
+        for port in exist_list:
+            if not (port in input_list):
+                remove_fwd(port)
+                wg_mod = 1
+        if wg_mod == 1:
+            restart_wg()
+        return True
+    except Exception as e:
+        print(e)
+        logging.warn(f'[WG]: Port fwd rectification: {e}')
+        return False

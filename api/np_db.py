@@ -228,7 +228,10 @@ def rectify_svc_list(pubkey):
     check Caddy upstream for each URL in dict
     delete any routes that aren't in dict
     '''
+    # Services without/no unique reverse proxy
     no_proxy = ['urbit-ames','minio-console']
+    # Services with port forwarding
+    forwarded = ['urbit-ames']
     caddy_conf = caddy_api.get_conf()['apps']['http']['servers']['srv0']['routes']
     svc_list, caddy_list = ['anchor'], []
     services, minios = {}, {}
@@ -271,6 +274,9 @@ def rectify_svc_list(pubkey):
                 services[subd]=f'{peer_ip}:{port}'
             if (svc_type == 'minio-console') and (port != None):
                 minios[subd]=f'{peer_ip}:{port}'
+            # Add addt'l svcs that need forwarding here
+            if (svc_type == 'urbit-ames') and (port != None):
+                ameses[port]=peer_ip
 
         # Create a list of current Caddy routes
         for route in caddy_conf:
@@ -302,6 +308,11 @@ def rectify_svc_list(pubkey):
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_minio(subd, host=f'{root_domain}',upstream=upstr)
                 sleep(3)
+
+        # Rectify port forwarding configurations
+        # Add a 'tcp' key for TCP services
+        fwd_rectify = {'udp':ameses}
+        wg_api.rectify_port_fwd(fwd_rectify)
 
     upd_value('services','status','ok','pubkey',pubkey)
 
