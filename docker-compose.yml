@@ -26,6 +26,7 @@ services:
       - /lib/modules:/lib/modules
     ports:
       - 51820:51820/udp
+      - "30000-30150:30000-30150/udp"
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     networks:

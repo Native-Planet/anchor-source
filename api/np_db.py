@@ -456,14 +456,14 @@ def port_gen(svc_type):
         port_records = []
     else:
         if svc_type == 'urbit-web':
-            port = random.randrange(80,9999)
+            port = random.randrange(80,8999)
             while port in port_records:
-                port = random.randrange(80,9999)
+                port = random.randrange(80,8999)
             return port
         if svc_type == 'urbit-ames':
-            port = random.randrange(30000,40000)
+            port = random.randrange(30000,30150)
             while port in port_records:
-                port = random.randrange(30000,40000)
+                port = random.randrange(30000,30150)
             return port
         if svc_type in ['minio','minio-console','minio-bucket']:
             port = random.randrange(10000,15000)
