@@ -234,7 +234,7 @@ def rectify_svc_list(pubkey):
     forwarded = ['urbit-ames']
     caddy_conf = caddy_api.get_conf()['apps']['http']['servers']['srv0']['routes']
     svc_list, caddy_list = ['anchor'], []
-    services, minios = {}, {}
+    services, minios, ameses = {}, {}, {}
     peerlist = wg_api.peer_list()
     del_peers = []
     svcs = get_client_svcs(pubkey)

@@ -34,6 +34,7 @@ def restart_wg():
     resp = requests.get(url)
     if resp.status_code == 200:
         logging.info('[WG]: WG interface restarted')
+        fwd_predown_rules()
         return True
     else:
         logging.warn(f'[WG]: Could not restart WG: {resp.status_code}')
@@ -207,23 +208,6 @@ def port_fwd(peer,port,protocol):
             with open("/etc/wireguard/wg0.conf", "w") as f:
                 contents = "".join(contents)
                 f.write(contents)
-        else:
-            logging.warning(f'[WG]: Invalid routing rule')
-            return False
-        with open("/etc/wireguard/wg0.conf", "r") as f:
-            contents = f.readlines()
-            for num, line in enumerate(contents, 1):
-                # Find the line numbers to insert PreDown rules
-                if 'PostDown' in line:
-                    index = num - 1
-        pre = rule_gen('pre','D')
-        fwd = rule_gen('fwd','D')
-        contents.insert(index, pre)
-        contents.insert(index, fwd)
-        if (pre != False) and (fwd != False):
-            with open("/etc/wireguard/wg0.conf", "w") as f:
-                contents = "".join(contents)
-                f.write(contents)
                 return True
         else:
             logging.warning(f'[WG]: Invalid routing rule')
@@ -309,3 +293,28 @@ def rectify_port_fwd(fwd_input):
         print(e)
         logging.warn(f'[WG]: Port fwd rectification: {e}')
         return False
+
+# Create PreDown rules after interface restart
+# We can't restart it if it has an invalid rule
+def fwd_predown_rules():
+    pres = []
+    f = open('/etc/wireguard/wg0.conf', 'r')
+    content = f.read().splitlines()
+    # Extract all forwarding PreUp rules
+    for line in content:
+        if ("--dport" in line) and ("PreUp" in line):
+            substr = "PreUp = iptables -A"
+            replace = "PreDown = iptables -D"
+            # Create matching PreDown rules
+            post_rule = line.replace(substr, replace)
+            pres.append(post_rule)
+    with open("/etc/wireguard/wg0.conf", "r") as f:
+        contents = f.readlines()
+        for num, line in enumerate(contents, 1):
+            # Find the line numbers to insert PreDown rules
+            if 'PostDown' in line:
+                index = num - 1
+        for rule in pres:
+            # Append deletion rules if they don't exist
+            if rule not in content:
+                content.insert(index,rule)
