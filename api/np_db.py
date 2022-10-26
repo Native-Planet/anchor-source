@@ -449,6 +449,68 @@ def port_assign(svc):
         upd_value('services','status','creating','uid',svc)
 
 
+# Delete a service for a client
+def delete_service(subdomain,pubkey,svc_type):
+    lease = get_value('anchors','lease','pubkey',pubkey)
+    response = {'action':'delete',
+    'debug':None,
+    'error':0,
+    'pubkey':pubkey,
+    'svc_type':svc_type,
+    'lease':lease,
+    'subdomain':subdomain,
+    'code':200}
+    sub_exists = get_value('services','uid','subdomain',subdomain)
+    pub_exists = get_value('services','pubkey','subdomain',subdomain)
+    if sub_exists != False:
+        if pubkey == pub_exists:
+            assoc_rows = []
+            sub_svc =  get_value('services','svc_type','uid',sub_exists)
+            if (sub_svc == 'urbit-web') or (sub_svc == 'urbit-ames'):
+                service = 'urbit'
+                assoc_rows.append(sub_exists)
+                if sub_svc == 'urbit-web':
+                    ames_row = get_value('services','uid','subdomain',f'ames.{subdomain}')
+                    assoc_rows.append(ames_row)
+                else:
+                    landscape_sub = subdomain.replace('ames.','')
+                    landscape_row = get_value('services','uid','subdomain',landscape_row)
+                    assoc_rows.append(landscape_row)
+            elif (sub_svc == 'minio') or (sub_svc == 'minio-console') or (sub_svc == 'minio-bucket'):
+                service = 'minio'
+                assoc_rows.append(sub_exists)
+                if sub_svc == 'minio':
+                    console_row = get_value('services','uid','subdomain',f'console.{subdomain}')
+                    bucket_row = get_value('services','uid','subdomain',f'bucket.{subdomain}')
+                    assoc_rows.append(console_row)
+                    append_rows.append(bucket_row)
+                elif sub_svc == 'minio-console':
+                    minio_sub = subdomain.replace('console.','')
+                    minio_row = get_value('services','uid','subdomain',minio_sub)
+                    bucket_row = get_value('services','uid','subdomain',f'bucket.{minio_sub}')
+                    append_rows.append(minio_row)
+                    append_rows.append(bucket_row)
+                elif sub_svc == 'minio-bucket':
+                    minio_sub = subdomain.replace('bucket.','')
+                    console_row = get_value('services','uid','subdomain',f'console.{minio_sub}')
+                    minio_row = get_value('services','uid','subdomain',minio_sub)
+                    append_rows.append(console_row)
+                    append_rows.append(minio_row)
+            if assoc_rows != []:
+                for svc in assoc_rows:
+                    delete_svc('uid',svc)
+            threading.Thread(target=rectify_svc_list, name='poll', args=(pubkey,)).start()
+        else:
+            response['error'] = 1
+            response['code'] = 400
+            response['debug'] = 'Invalid pubkey'
+    else:
+        response['error'] = 1
+        response['code'] = 400
+        response['debug'] = 'Service is not registered'
+    return response
+
+
 # Determine random unused port for service
 def port_gen(svc_type):
     port_records = get_values('services','port','svc_type',svc_type)
