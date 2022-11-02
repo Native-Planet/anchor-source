@@ -127,6 +127,7 @@ def retrieve_info():
     'pubkey':pubkey,
     'status':status,
     'subdomains':subdomains,
+    'ongoing':1,
     'lease': np_db.lease}
     return jsonify(response),reqstatus
 
