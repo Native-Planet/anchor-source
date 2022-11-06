@@ -223,7 +223,16 @@ def remove_fwd(port):
         new_f = f.readlines()
         f.seek(0)
         for line in new_f:
-            if lookup not in line:
+            if (lookup not in line) and ('PreUp' not in line):
+                f.write(line)
+        f.truncate()
+        # Restart after the PreUp rule is removed
+        # in order to be able to remove PreDown
+        restart_wg()
+        f.seek(0)
+        new_f = f.readlines()
+        for line in new_f:
+            if (lookup not in line) and ('PreDown' not in line):
                 f.write(line)
         f.truncate()
     # You still need to restart the interface
