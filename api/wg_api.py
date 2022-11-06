@@ -219,6 +219,7 @@ def remove_fwd(port):
     port = str(port)
     logging.info(f'[WG]: Removing port forwarding for {port}')
     lookup = f'dport {port}'
+    # Remove the PreUp rule
     with open("/etc/wireguard/wg0.conf","r+") as f:
         new_f = f.readlines()
         f.seek(0)
@@ -229,6 +230,8 @@ def remove_fwd(port):
         # Restart after the PreUp rule is removed
         # in order to be able to remove PreDown
         restart_wg()
+    # Remove the PreDown rule (no restart)
+    with open("/etc/wireguard/wg0.conf","r+") as f:
         f.seek(0)
         new_f = f.readlines()
         for line in new_f:
@@ -317,7 +320,7 @@ def fwd_predown_rules():
             # Create matching PreDown rules
             post_rule = line.replace(substr, replace)
             pres.append(post_rule)
-    with open("/etc/wireguard/wg0.conf", "r") as f:
+    with open("/etc/wireguard/wg0.conf", "r+") as f:
         contents = f.readlines()
         for num, line in enumerate(contents, 1):
             # Find the line numbers to insert PreDown rules
