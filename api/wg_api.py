@@ -36,6 +36,9 @@ def restart_wg():
         logging.info('[WG]: WG interface restarted')
         fwd_predown_rules()
         return True
+    elif resp.status_code == 429:
+        logging.info('[WG]: WG interface already restarting!')
+        return False
     else:
         logging.warn(f'[WG]: Could not restart WG: {resp.status_code}')
         return False
@@ -310,7 +313,7 @@ def rectify_port_fwd(fwd_input):
 # We can't restart it if it has an invalid rule
 def fwd_predown_rules():
     pres = []
-    with open("/etc/wireguard/wg0.conf", "r") as f:
+    with open("/etc/wireguard/wg0.conf", "w") as f:
         contents = f.readlines()
         for num, line in enumerate(contents, 1):
             if ("--dport" in line) and ("PreUp" in line):
@@ -320,6 +323,7 @@ def fwd_predown_rules():
                 post_rule = line.replace(substr,replace)
                 pres.append(post_rule)
     with open("/etc/wireguard/wg0.conf", "r+") as f:
+        f.seek(0)
         contents = f.readlines()
         for num, line in enumerate(contents, 1):
             # Find the line numbers to insert PreDown rules
@@ -329,7 +333,8 @@ def fwd_predown_rules():
             # Append deletion rules if they don't exist
             if rule not in contents:
                 contents.insert(index,rule)
-        contents = str("".join(contents))
-        f.write(contents)
+        contents = "".join(contents)
+    with open("/etc/wireguard/wg0.conf", "w") as f:
+        f.write(str(contents))
     pred = len(pres)
     logging.info(f'[WG] Inserted {pred} PreDown rules')
