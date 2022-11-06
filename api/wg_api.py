@@ -327,7 +327,7 @@ def fwd_predown_rules():
                 index = num - 1
         for rule in pres:
             # Append deletion rules if they don't exist
-            if rule not in content:
-                content.insert(index,rule)
+            if rule not in contents:
+                contents.insert(index,rule)
     pred = len(pres)
     logging.info(f'[WG] Inserted {pred} PreDown rules')
