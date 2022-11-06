@@ -310,16 +310,15 @@ def rectify_port_fwd(fwd_input):
 # We can't restart it if it has an invalid rule
 def fwd_predown_rules():
     pres = []
-    f = open('/etc/wireguard/wg0.conf', 'r')
-    content = f.read().splitlines()
-    # Extract all forwarding PreUp rules
-    for line in content:
-        if ("--dport" in line) and ("PreUp" in line):
-            substr = "PreUp = iptables -A"
-            replace = "PreDown = iptables -D"
-            # Create matching PreDown rules
-            post_rule = line.replace(substr, replace)
-            pres.append(post_rule)
+    with open("/etc/wireguard/wg0.conf", "r") as f:
+        contents = f.readlines()
+        for num, line in enumerate(contents, 1):
+            if ("--dport" in line) and ("PreUp" in line):
+                substr = "PreUp = iptables -A"
+                replace = "PreDown = iptables -D"
+                # Create matching PreDown rules
+                post_rule = line.replace(substr,replace)
+                pres.append(post_rule)
     with open("/etc/wireguard/wg0.conf", "r+") as f:
         contents = f.readlines()
         for num, line in enumerate(contents, 1):
@@ -330,3 +329,5 @@ def fwd_predown_rules():
             # Append deletion rules if they don't exist
             if rule not in content:
                 content.insert(index,rule)
+    pred = len(pres)
+    logging.info(f'[WG] Inserted {pred} PreDown rules')
