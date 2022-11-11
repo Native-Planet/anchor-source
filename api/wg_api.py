@@ -220,28 +220,30 @@ def port_fwd(peer,port,protocol):
 # Remove a forwarding rule from WG conf
 def remove_fwd(port):
     port = str(port)
-    logging.info(f'[WG]: Removing port forwarding for {port}')
-    lookup = f'dport {port}'
+    lookup = f'--dport {port}'
     # Remove the PreUp rule
-    with open("/etc/wireguard/wg0.conf","w+") as f:
-        new_f = f.readlines()
-        f.seek(0)
-        for line in new_f:
-            if (lookup not in line) and ('PreUp' not in line):
+    linematch,preups,predowns = [],[],[]
+    with open(wgconf, "r") as f:
+        lines = f.readlines()
+    for line in lines:
+        if lookup in line:
+            linematch.append(lines.index(line))
+    preups = linematch[0:2]
+    predowns = linematch[2:4]
+    with open(wgconf, 'w') as f:
+        for number, line in enumerate(lines):
+            if number not in preups:
                 f.write(line)
-        f.truncate()
-        # Restart after the PreUp rule is removed
-        # in order to be able to remove PreDown
-        restart_wg()
+    # Restart after the PreUp rule is removed
+    # in order to be able to remove PreDown
+    restart_wg()
     # Remove the PreDown rule (no restart)
-    with open("/etc/wireguard/wg0.conf","w+") as f:
-        f.seek(0)
-        new_f = f.readlines()
-        for line in new_f:
-            if (lookup not in line) and ('PreDown' not in line):
+    with open(wgconf, "r") as f:
+        lines = f.readlines()
+    with open(wgconf, 'w') as f:
+        for number, line in enumerate(lines):
+            if number not in predowns:
                 f.write(line)
-        f.truncate()
-    # You still need to restart the interface
 
 # Return a dict of all existing port forwards
 # {tcp:{port:peer,port:peer},udp:{port:peer}}
