@@ -171,6 +171,10 @@ def check_dns(url):
         my_ip = get('https://api.ipify.org').content.decode('utf8')
         subdomain_ip = socket.gethostbyname(url)
         if subdomain_ip != my_ip:
+            print(f'''[DNS]\n
+            Error: please double-check your DNS records!\n
+            Your host: {my_ip}\n
+            {url} IP: {subdomain_ip}''')
             return False
         else:
             return True
