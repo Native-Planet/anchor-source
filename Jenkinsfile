@@ -42,11 +42,10 @@ pipeline {
                 git url: 'https://github.com/Native-Planet/anchor-source.git', 
                     credentialsId: 'Github token', 
                     branch: "${environ}"
-                    sh "docker login -u np -p $reg_pw img.infra.native.computer"
+                    sh "docker login -u nativeplanet -p $reg_pw docker.io"
                     dir("${env.WORKSPACE}/"){
                         sh (
                             script: '''
-                                docker login -u nativeplanet -p ${DH_PW} docker.io
                                 docker buildx build --platform linux/amd64 --no-cache ./api/ -t anchor-api:${tag}
                                 docker tag anchor-api:${tag} nativeplanet/anchor-api:${tag}
                                 docker buildx build --platform linux/amd64 --no-cache ./wg/ -t anchor-wg:${tag}
