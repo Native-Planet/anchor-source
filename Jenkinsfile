@@ -39,7 +39,7 @@ pipeline {
                         sleep(1)
                     }
                 }
-                git url: 'https://github.com/Native-Planet/startram.git', 
+                git url: 'https://github.com/Native-Planet/anchor-source.git', 
                     credentialsId: 'Github token', 
                     branch: "${environ}"
                     sh "docker login -u np -p $reg_pw img.infra.native.computer"
