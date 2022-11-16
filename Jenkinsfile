@@ -39,6 +39,13 @@ pipeline {
                         sleep(1)
                     }
                 }
+                script {
+                    if( "${tag}" == "nobuild" ) {
+                        currentBuild.getRawBuild().getExecutor().interrupt(Result.NOT_BUILT)
+                        print("Ignoring branch ${tag}")
+                        sleep(1)
+                    }
+                }
                 git url: 'https://github.com/Native-Planet/anchor-source.git', 
                     credentialsId: 'Github token', 
                     branch: "${environ}"
