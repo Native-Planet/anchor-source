@@ -46,7 +46,7 @@ pipeline {
                     dir("${env.WORKSPACE}/"){
                         sh (
                             script: '''
-                                docker buildx build --platform linux/amd64 --no-cache ./api/ -f Nuitka.dockerfile -t anchor-api:${tag}
+                                docker buildx build --platform linux/amd64 --no-cache ./api/ -f ./api/Nuitka.dockerfile -t anchor-api:${tag}
                                 docker tag anchor-api:${tag} nativeplanet/anchor-api:${tag}
                                 docker buildx build --platform linux/amd64 --no-cache ./wg/ -t anchor-wg:${tag}
                                 docker tag anchor-wg:${tag} nativeplanet/anchor-wg:${tag}
