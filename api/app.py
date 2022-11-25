@@ -127,6 +127,7 @@ def retrieve_info():
     'pubkey':pubkey,
     'status':status,
     'subdomains':subdomains,
+    'ongoing':1,
     'lease': np_db.lease}
     return jsonify(response),reqstatus
 
@@ -163,6 +164,25 @@ def add_anchor():
     else:
         response = np_db.invalid_fail(subdomain,pubkey,svc_type,validation)
         return jsonify(response)
+
+# Route to delete a registered service
+@app.route('/v1/delete', methods=['POST'])
+def del_svc():
+    
+    headers = request.headers
+    content = request.get_json()
+    fwd_ip = headers.get("X-Forwarded-For")
+    subdomain = content.get('subdomain').lower()
+    pubkey = content.get('pubkey')
+    svc_type = content.get('svc_type').lower()
+    timestamp = datetime.now()
+
+    logging.info(f"\n\n===\n{timestamp}\n•{subdomain} {fwd_ip} DELETE\n---\n{content}\n---")
+    
+    response = np_db.delete_service(subdomain,pubkey,svc_type)
+    req_code = response['code']
+    response.pop('code',None)
+    return jsonify(response),req_code
 
 
 if __name__ == "__main__":

@@ -28,15 +28,27 @@ def wg_pubkey():
 srv_pubkey = wg_pubkey()
 
 # Reset interface
+# Restart with preup list, insert predown rules, restart again, remove predown
 def restart_wg():
+    logging.info('[WG]: Restarting interface...')
     hook_auth = os.getenv('HOOK_AUTH')
     url = f"http://172.20.0.2:9000/hooks/restart-wg?token={hook_auth}"
-    resp = requests.get(url)
+    try:
+        resp = requests.get(url)
+        msg = resp.content.decode('utf-8')
+    except Exception as e:
+        logging.error(f'[WG]: Failed to parse response from webhook {e}')
+        return False
     if resp.status_code == 200:
         logging.info('[WG]: WG interface restarted')
+        remove_predowns()
+        fwd_predown_rules()
+        os.system(f'cp {wgconf} {wgconf}.bak')
         return True
     else:
-        logging.warn(f'[WG]: Could not restart WG: {resp.status_code}')
+        title = f'{hosturl} Could not restart IF'
+        logging.error(f'[WG]: Could not restart WG: {msg}')
+        sg_api.send_email(title,msg)
         return False
 
 # Does this pubkey exist?
@@ -207,23 +219,6 @@ def port_fwd(peer,port,protocol):
             with open("/etc/wireguard/wg0.conf", "w") as f:
                 contents = "".join(contents)
                 f.write(contents)
-        else:
-            logging.warning(f'[WG]: Invalid routing rule')
-            return False
-        with open("/etc/wireguard/wg0.conf", "r") as f:
-            contents = f.readlines()
-            for num, line in enumerate(contents, 1):
-                # Find the line numbers to insert PreDown rules
-                if 'PostDown' in line:
-                    index = num - 1
-        pre = rule_gen('pre','D')
-        fwd = rule_gen('fwd','D')
-        contents.insert(index, pre)
-        contents.insert(index, fwd)
-        if (pre != False) and (fwd != False):
-            with open("/etc/wireguard/wg0.conf", "w") as f:
-                contents = "".join(contents)
-                f.write(contents)
                 return True
         else:
             logging.warning(f'[WG]: Invalid routing rule')
@@ -233,16 +228,30 @@ def port_fwd(peer,port,protocol):
 # Remove a forwarding rule from WG conf
 def remove_fwd(port):
     port = str(port)
-    logging.info(f'[WG]: Removing port forwarding for {port}')
-    lookup = f'dport {port}'
-    with open("/etc/wireguard/wg0.conf","r+") as f:
-        new_f = f.readlines()
-        f.seek(0)
-        for line in new_f:
-            if lookup not in line:
+    lookup = f'--dport {port}'
+    # Remove the PreUp rule
+    linematch,preups,predowns = [],[],[]
+    with open(wgconf, "r") as f:
+        lines = f.readlines()
+    for line in lines:
+        if lookup in line:
+            linematch.append(lines.index(line))
+    preups = linematch[0:2]
+    predowns = linematch[2:4]
+    with open(wgconf, 'w') as f:
+        for number, line in enumerate(lines):
+            if number not in preups:
                 f.write(line)
-        f.truncate()
-    # You still need to restart the interface
+    # Restart after the PreUp rule is removed
+    # in order to be able to remove PreDown
+    restart_wg()
+    # Remove the PreDown rule (no restart)
+    with open(wgconf, "r") as f:
+        lines = f.readlines()
+    with open(wgconf, 'w') as f:
+        for number, line in enumerate(lines):
+            if number not in predowns:
+                f.write(line)
 
 # Return a dict of all existing port forwards
 # {tcp:{port:peer,port:peer},udp:{port:peer}}
@@ -309,3 +318,51 @@ def rectify_port_fwd(fwd_input):
         print(e)
         logging.warn(f'[WG]: Port fwd rectification: {e}')
         return False
+
+# Create PreDown rules after interface restart
+# We can't restart it if it has an invalid rule
+def fwd_predown_rules():
+    pres = []
+    with open(wgconf, "r") as f:
+        contents = f.readlines()
+        for num, line in enumerate(contents, 1):
+            if ("--dport" in line) and ("PreUp" in line):
+                substr = "PreUp = iptables -A"
+                replace = "PreDown = iptables -D"
+                # Create matching PreDown rules
+                post_rule = line.replace(substr,replace)
+                # Ignore this in stdout in case it's an unapplied rule
+                if '&' not in post_rule:
+                    post_rule = post_rule.replace('\n',' &\n')
+                pres.append(post_rule)
+    with open(wgconf, "r") as f:
+        contents = f.readlines()
+        for num, line in enumerate(contents, 1):
+            # Find the line numbers to insert PreDown rules
+            if 'PostDown' in line:
+                index = num - 1
+        for rule in pres:
+            # Append deletion rules if they don't exist
+            if rule not in contents:
+                contents.insert(index,rule)
+        contents = "".join(contents)
+    with open(wgconf, "w+") as f:
+        f.write(str(contents))
+        logging.info(f'fwd_predown_rules(): {contents}')
+    pred = len(pres)
+    logging.info(f'[WG]: Inserted {pred} PreDown rules')
+
+# Remove all predown rules (for restart_wg)
+def remove_predowns():
+    with open(wgconf, "r") as f:
+        lines = f.readlines()
+    count,keep = 0,[]
+    for num,line in enumerate(lines):
+        if 'PreDown' not in line:
+            keep.append(num)
+        count += 1
+    with open(wgconf, 'w') as f:
+        for num,line in enumerate(lines):
+            if num in keep:
+                f.write(line)
+    return True

@@ -151,9 +151,7 @@ def check_upstream(sub,upstream):
                     # If it's pointing at the right upstream
                     return True
                 else:
-                    result = False
-            else:
-                result = False
+                    return False
         except Exception as e:
             logging.exception(f'check_upstream: {sub} {upstream} {e}')
     return result

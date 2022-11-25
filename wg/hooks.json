@@ -3,6 +3,7 @@
             "id": "restart-wg",
             "execute-command": "/etc/webhook/restart.sh",
             "response-message": "Success -- interface restarting",
+            "max-concurrency": 1,
 "trigger-rule":
 {
     "or":

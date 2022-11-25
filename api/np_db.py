@@ -171,6 +171,10 @@ def check_dns(url):
         my_ip = get('https://api.ipify.org').content.decode('utf8')
         subdomain_ip = socket.gethostbyname(url)
         if subdomain_ip != my_ip:
+            print(f'''[DNS]\n
+            Error: please double-check your DNS records!\n
+            Your host: {my_ip}\n
+            {url} IP: {subdomain_ip}''')
             return False
         else:
             return True
@@ -234,7 +238,7 @@ def rectify_svc_list(pubkey):
     forwarded = ['urbit-ames']
     caddy_conf = caddy_api.get_conf()['apps']['http']['servers']['srv0']['routes']
     svc_list, caddy_list = ['anchor'], []
-    services, minios = {}, {}
+    services, minios, ameses = {}, {}, {}
     peerlist = wg_api.peer_list()
     del_peers = []
     svcs = get_client_svcs(pubkey)
@@ -293,7 +297,6 @@ def rectify_svc_list(pubkey):
             upstr = services[subd]
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_reverse_proxy(subd, host=f'{root_domain}',upstream=upstr)
-                sleep(3)
 
         # Delete pubkeys that aren't registered
         for peer in peerlist:
@@ -307,7 +310,6 @@ def rectify_svc_list(pubkey):
             upstr = minios[subd]
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_minio(subd, host=f'{root_domain}',upstream=upstr)
-                sleep(3)
 
         # Rectify port forwarding configurations
         # Add a 'tcp' key for TCP services
@@ -447,6 +449,68 @@ def port_assign(svc):
             else:
                 upd_value('services','port',port,'uid',svc)
         upd_value('services','status','creating','uid',svc)
+
+
+# Delete a service for a client
+def delete_service(subdomain,pubkey,svc_type):
+    lease = get_value('anchors','lease','pubkey',pubkey)
+    response = {'action':'delete',
+    'debug':None,
+    'error':0,
+    'pubkey':pubkey,
+    'svc_type':svc_type,
+    'lease':lease,
+    'subdomain':subdomain,
+    'code':200}
+    sub_exists = get_value('services','uid','subdomain',subdomain)
+    pub_exists = get_value('services','pubkey','subdomain',subdomain)
+    if sub_exists != False:
+        if pubkey == pub_exists:
+            assoc_rows = []
+            sub_svc =  get_value('services','svc_type','uid',sub_exists)
+            if (sub_svc == 'urbit-web') or (sub_svc == 'urbit-ames'):
+                service = 'urbit'
+                assoc_rows.append(sub_exists)
+                if sub_svc == 'urbit-web':
+                    ames_row = get_value('services','uid','subdomain',f'ames.{subdomain}')
+                    assoc_rows.append(ames_row)
+                else:
+                    landscape_sub = subdomain.replace('ames.','')
+                    landscape_row = get_value('services','uid','subdomain',landscape_row)
+                    assoc_rows.append(landscape_row)
+            elif (sub_svc == 'minio') or (sub_svc == 'minio-console') or (sub_svc == 'minio-bucket'):
+                service = 'minio'
+                assoc_rows.append(sub_exists)
+                if sub_svc == 'minio':
+                    console_row = get_value('services','uid','subdomain',f'console.{subdomain}')
+                    bucket_row = get_value('services','uid','subdomain',f'bucket.{subdomain}')
+                    assoc_rows.append(console_row)
+                    append_rows.append(bucket_row)
+                elif sub_svc == 'minio-console':
+                    minio_sub = subdomain.replace('console.','')
+                    minio_row = get_value('services','uid','subdomain',minio_sub)
+                    bucket_row = get_value('services','uid','subdomain',f'bucket.{minio_sub}')
+                    append_rows.append(minio_row)
+                    append_rows.append(bucket_row)
+                elif sub_svc == 'minio-bucket':
+                    minio_sub = subdomain.replace('bucket.','')
+                    console_row = get_value('services','uid','subdomain',f'console.{minio_sub}')
+                    minio_row = get_value('services','uid','subdomain',minio_sub)
+                    append_rows.append(console_row)
+                    append_rows.append(minio_row)
+            if assoc_rows != []:
+                for svc in assoc_rows:
+                    delete_svc('uid',svc)
+            threading.Thread(target=rectify_svc_list, name='poll', args=(pubkey,)).start()
+        else:
+            response['error'] = 1
+            response['code'] = 400
+            response['debug'] = 'Invalid pubkey'
+    else:
+        response['error'] = 1
+        response['code'] = 400
+        response['debug'] = 'Service is not registered'
+    return response
 
 
 # Determine random unused port for service
