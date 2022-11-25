@@ -297,7 +297,6 @@ def rectify_svc_list(pubkey):
             upstr = services[subd]
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_reverse_proxy(subd, host=f'{root_domain}',upstream=upstr)
-                sleep(3)
 
         # Delete pubkeys that aren't registered
         for peer in peerlist:
@@ -311,7 +310,6 @@ def rectify_svc_list(pubkey):
             upstr = minios[subd]
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_minio(subd, host=f'{root_domain}',upstream=upstr)
-                sleep(3)
 
         # Rectify port forwarding configurations
         # Add a 'tcp' key for TCP services
