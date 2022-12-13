@@ -46,9 +46,10 @@ pipeline {
                     dir("${env.WORKSPACE}/"){
                         sh (
                             script: '''
-                                docker buildx build --push --tag nativeplanet/anchor-api:${tag} --platform linux/amd64 --no-cache ./api/
-                                docker buildx build --push --tag nativeplanet/anchor-wg:${tag} --platform linux/amd64 --no-cache ./wg/
-                                docker buildx build --push --tag nativeplanet/anchor-caddy:${tag} --platform linux/amd64 --no-cache ./caddy/
+                                docker buildx use xbuilder
+                                docker buildx build --push --tag nativeplanet/anchor-api:${tag} --platform linux/amd64,linux/arm64 --no-cache ./api/
+                                docker buildx build --push --tag nativeplanet/anchor-wg:${tag} --platform linux/amd64,linux/arm64 --no-cache ./wg/
+                                docker buildx build --push --tag nativeplanet/anchor-caddy:${tag} --platform linux/amd64,linux/arm64 --no-cache ./caddy/
                             ''',
                             returnStdout: true
                             )
