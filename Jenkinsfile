@@ -46,6 +46,7 @@ pipeline {
                     dir("${env.WORKSPACE}/"){
                         sh (
                             script: '''
+                                docker buildx create --name xbuilder
                                 docker buildx use xbuilder
                                 docker buildx build --push --tag nativeplanet/anchor-api:${tag} --platform linux/amd64,linux/arm64 --no-cache ./api/
                                 docker buildx build --push --tag nativeplanet/anchor-wg:${tag} --platform linux/amd64,linux/arm64 --no-cache ./wg/
