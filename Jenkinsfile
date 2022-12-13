@@ -46,11 +46,11 @@ pipeline {
                     dir("${env.WORKSPACE}/"){
                         sh (
                             script: '''
-                                if $(docker buildx create --name xbuilder); \ 
-                                    then \
-                                        echo "builder created" \
-                                    else \
-                                        echo "builder exists" \
+                                if $(docker buildx create --name xbuilder); 
+                                    then
+                                        echo "builder created"
+                                    else
+                                        echo "builder exists"
                                 fi
                                 docker buildx use xbuilder
                                 docker buildx build --push --tag nativeplanet/anchor-api:${tag} --platform linux/amd64,linux/arm64 --no-cache ./api/
