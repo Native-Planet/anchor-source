@@ -6,12 +6,14 @@ from subprocess import Popen, PIPE
 logging.root.setLevel(logging.INFO)
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 
+
 # Important note:
 # Pubkey provided by controller is b64-encoded;
 # We decode it before we hand it off to wgconfig and
 # re-encode when we query the db so we can keep it URL-safe
 
 interface = 'wg0'
+wgconf = '/etc/wireguard/wg0.conf'
 root_domain = os.getenv('ROOT_DOMAIN')
 wc = wgconfig.WGConfig('/etc/wireguard/wg0.conf')
 subnet = ipaddress.ip_network('10.13.13.0/24')
