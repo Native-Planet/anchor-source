@@ -43,8 +43,8 @@ def restart_wg():
         return False
     if resp.status_code == 200:
         logging.info('[WG]: WG interface restarted')
-        remove_predowns()
-        fwd_predown_rules()
+        # remove_predowns()
+        # fwd_predown_rules()
         os.system(f'cp {wgconf} {wgconf}.bak')
         return True
     else:
@@ -211,7 +211,7 @@ def port_fwd(peer,port,protocol):
 {protocol} -d {peer} --dport {port} -j ACCEPT\n'
         preroute_rule = f'{prefix} = iptables -{ad} PREROUTING \
 -t nat -p {protocol} -i eth0 --dport {port} -j DNAT --to-destination \
-{peer}:{port}\n'
+{peer}:{port}\n -m comment --comment "fwded"\n'
         if rule == 'fwd':
             return fwd_rule
         elif rule == 'pre':
