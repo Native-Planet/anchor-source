@@ -211,7 +211,7 @@ def port_fwd(peer,port,protocol):
 {protocol} -d {peer} --dport {port} -j ACCEPT\n'
         preroute_rule = f'{prefix} = iptables -{ad} PREROUTING \
 -t nat -p {protocol} -i eth0 --dport {port} -j DNAT --to-destination \
-{peer}:{port}\n -m comment --comment "fwded"\n'
+{peer}:{port} -m comment --comment "fwded"\n'
         if rule == 'fwd':
             return fwd_rule
         elif rule == 'pre':
