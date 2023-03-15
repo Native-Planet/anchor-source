@@ -466,7 +466,7 @@ def port_assign(svc):
 
 # Delete a service for a client
 def delete_service(subdomain,pubkey,svc_type):
-    lease = get_value('anchors','lease','pubkey',pubkey)
+    lease = '2099-12-31'
     response = {'action':'delete',
     'debug':None,
     'error':0,
