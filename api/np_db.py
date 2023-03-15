@@ -498,19 +498,19 @@ def delete_service(subdomain,pubkey,svc_type):
                     console_row = get_value('services','uid','subdomain',f'console.{subdomain}')
                     bucket_row = get_value('services','uid','subdomain',f'bucket.{subdomain}')
                     assoc_rows.append(console_row)
-                    append_rows.append(bucket_row)
+                    assoc_rows.append(bucket_row)
                 elif sub_svc == 'minio-console':
                     minio_sub = subdomain.replace('console.','')
                     minio_row = get_value('services','uid','subdomain',minio_sub)
                     bucket_row = get_value('services','uid','subdomain',f'bucket.{minio_sub}')
-                    append_rows.append(minio_row)
-                    append_rows.append(bucket_row)
+                    assoc_rows.append(minio_row)
+                    assoc_rows.append(bucket_row)
                 elif sub_svc == 'minio-bucket':
                     minio_sub = subdomain.replace('bucket.','')
                     console_row = get_value('services','uid','subdomain',f'console.{minio_sub}')
                     minio_row = get_value('services','uid','subdomain',minio_sub)
-                    append_rows.append(console_row)
-                    append_rows.append(minio_row)
+                    assoc_rows.append(console_row)
+                    assoc_rows.append(minio_row)
             if assoc_rows != []:
                 for svc in assoc_rows:
                     delete_svc('uid',svc)
