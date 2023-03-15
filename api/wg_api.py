@@ -43,8 +43,8 @@ def restart_wg():
         return False
     if resp.status_code == 200:
         logging.info('[WG]: WG interface restarted')
-        remove_predowns()
-        fwd_predown_rules()
+        # remove_predowns()
+        # fwd_predown_rules()
         os.system(f'cp {wgconf} {wgconf}.bak')
         return True
     else:
@@ -121,6 +121,23 @@ def peer_list():
         returnlist.append(peer)
     return returnlist
 
+# Get DB-encoded pubkey for an IP
+def get_ip_pubkey(ip):
+    ip_net = f'{ip}/32'
+    wc.read_file()
+    data = wc.peers
+    enc_peers = list(data)
+    dec_peers = peer_list()
+    dec_ip, enc_ip, result = {}, {}, ''
+    for peer in data:
+        peer_ip = data[peer]['AllowedIPs']
+        if peer_ip == ip_net:
+            result = pubkey_encode(peer)
+    if result != '':
+        return result
+    else:
+        return None
+
 # Delete a peer or list of peers
 def del_peer(pubkey):
     if isinstance(pubkey,list):
@@ -194,7 +211,7 @@ def port_fwd(peer,port,protocol):
 {protocol} -d {peer} --dport {port} -j ACCEPT\n'
         preroute_rule = f'{prefix} = iptables -{ad} PREROUTING \
 -t nat -p {protocol} -i eth0 --dport {port} -j DNAT --to-destination \
-{peer}:{port}\n'
+{peer}:{port} -m comment --comment "fwded"\n'
         if rule == 'fwd':
             return fwd_rule
         elif rule == 'pre':
@@ -275,6 +292,7 @@ def fwd_exists():
 
 # Compare dict of forwarded services vs existing forwards
 def rectify_port_fwd(fwd_input):
+    # restart_wg()
     # {udp:{port:peer,port:peer},tcp:{port:peer}}
     def port_list(port_input):
         # Create lists of ports from fwd_input/fwd_exist
@@ -289,36 +307,42 @@ def rectify_port_fwd(fwd_input):
     fwd_exist = fwd_exists()
     exist_list = port_list(fwd_exist)
     input_list = port_list(fwd_input)
-    wg_mod = 0
+    # Return value will let us know if anything changed,
+    # and which peers need to have DB status updated
+    result = {'mod':0,'peers':[]}
     try:
         for protocol in fwd_input:
             for port in fwd_input[protocol]:
                 # Add missing forwards
                 if (port in fwd_input[protocol].keys()) and \
                 (port not in fwd_exist[protocol].keys()):
+                    logging.info(f'[WG] Rectify: Adding forwarding for {port}')
                     input_peer = fwd_input[protocol][port]
                     port_fwd(input_peer,port,protocol)
                     fwd_exist = fwd_exists()
-                    wg_mod = 1
+                    result['mod'] = 1
+                    result['peers'].append(get_ip_pubkey(fwd_input))
                 # Fix erroneous existing forwards
                 if (port in exist_list) and \
                 (fwd_input[protocol][port] != fwd_exist[protocol][port]):
+                    logging.info(f'[WG] Rectify: Removing forwarding for {port}')
                     input_peer = fwd_input[protocol][port]
                     remove_fwd(port)
                     port_fwd(input_peer,port,protocol)
                     fwd_exist = fwd_exists()
-                    wg_mod = 1
+                    result['mod'] = 1
+                    result['peers'].append(get_ip_pubkey(fwd_input))
         # Delete old forwards
         for port in exist_list:
             if not (port in input_list):
+                logging.info(f'[WG] Rectify: Removing forwarding for {port}')
                 remove_fwd(port)
-                wg_mod = 1
-        if wg_mod == 1:
-            restart_wg()
-        return True
+                result['mod'] = 1
+        return result
     except Exception as e:
-        print(e)
-        logging.warn(f'[WG]: Port fwd rectification: {e}')
+        msg = e
+        logging.error(f'[WG]: Could not restart WG: {e}')
+        sg_api.send_email(f'WG:{hostname}',msg)
         return False
 
 # Create PreDown rules after interface restart

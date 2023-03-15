@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify, redirect
 from datetime import datetime, timedelta
 from gevent.pywsgi import WSGIServer
 from time import sleep
+from queue import Queue
 import sqlite3, os, socket, json, threading, logging, ipaddress, base64, re, scrypt
 import wg_api, caddy_api, np_db
 
@@ -17,6 +18,8 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 root_domain = os.getenv('ROOT_DOMAIN')
 reg_code = os.getenv('REG_CODE')
 debug_db = os.getenv('DEBUG_DB')
+
+q = Queue()
 
 np_db.db.execute('CREATE TABLE IF NOT EXISTS anchors (uid INTEGER, \
             reg_id TEXT NULL, pubkey TEXT NULL, conf TEXT NULL, \
@@ -151,11 +154,11 @@ def add_anchor():
         svc_exists = np_db.get_value('services','pubkey','subdomain',subdomain)
         if svc_exists == None:
             response = np_db.new_pass(subdomain,pubkey,svc_type)
-            threading.Thread(target=np_db.rectify_svc_list, name='rectify', args=(pubkey,)).start()
+            q.put(pubkey)
             return jsonify(response)
         elif svc_exists != pubkey:
             np_db.upd_value('services','pubkey',pubkey,'pubkey',svc_exists)
-            threading.Thread(target=np_db.rectify_svc_list, name='rectify', args=(pubkey,)).start()
+            q.put(pubkey)
             response = np_db.return_existing(subdomain,pubkey,svc_type)
             return jsonify(response)
         else:
@@ -183,6 +186,15 @@ def del_svc():
     req_code = response['code']
     response.pop('code',None)
     return jsonify(response),req_code
+
+# Simple queue for service rectification
+def worker():
+    while True:
+        pubkey = q.get()
+        logging.info(f'Enqueuing {pubkey}')
+        np_db.rectify_svc_list(pubkey)
+        q.task_done()
+threading.Thread(target=worker,daemon=True).start()
 
 
 if __name__ == "__main__":

@@ -237,10 +237,11 @@ def rectify_svc_list(pubkey):
     # Services with port forwarding
     forwarded = ['urbit-ames']
     caddy_conf = caddy_api.get_conf()['apps']['http']['servers']['srv0']['routes']
-    svc_list, caddy_list = ['anchor'], []
+    svc_list, caddy_list, modpeers = ['anchor'], [], []
     services, minios, ameses = {}, {}, {}
     peerlist = wg_api.peer_list()
     del_peers = []
+    remove = 0
     svcs = get_client_svcs(pubkey)
     peer_ip = wg_api.check_peer(pubkey)
     # Make sure we have the pubkey registered
@@ -303,6 +304,7 @@ def rectify_svc_list(pubkey):
             if peer not in client:
                 del_peers.append(peer)
         if del_peers != []:
+            remove = 1
             wg_api.del_peer(del_peers)
 
         # Validate upstream for minios
@@ -311,10 +313,21 @@ def rectify_svc_list(pubkey):
             if caddy_api.check_upstream(subd,upstr) == False:
                 caddy_api.add_minio(subd, host=f'{root_domain}',upstream=upstr)
 
+        # Update WG conf in DB if it's wrong
+        should_conf = wg_api.get_conf(pubkey)
+        exists_conf = get_value('anchors','conf','pubkey',pubkey)
+        if should_conf != exists_conf:
+            upd_value('anchors','conf',should_conf,'pubkey',pubkey)
+
         # Rectify port forwarding configurations
         # Add a 'tcp' key for TCP services
         fwd_rectify = {'udp':ameses}
-        wg_api.rectify_port_fwd(fwd_rectify)
+        mod = wg_api.rectify_port_fwd(fwd_rectify)
+        for peer in mod['peers']:
+            modpeers.append(peer)
+        # Restart if config was modified
+        if (remove == 1) or (mod['mod'] == 1):
+            wg_api.restart_wg()
 
     upd_value('services','status','ok','pubkey',pubkey)
 
@@ -453,7 +466,7 @@ def port_assign(svc):
 
 # Delete a service for a client
 def delete_service(subdomain,pubkey,svc_type):
-    lease = get_value('anchors','lease','pubkey',pubkey)
+    lease = '2099-12-31'
     response = {'action':'delete',
     'debug':None,
     'error':0,
