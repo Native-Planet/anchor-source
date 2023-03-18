@@ -413,6 +413,7 @@ def new_pass(subdomain,pubkey,svc_type):
     response = {'action':'create',
         'debug':None,
         'error':0,
+        'alias':'null',
         'subdomain':subdomain,
         'svc_type':svc_type,
         'pubkey':pubkey,
@@ -426,6 +427,7 @@ def return_existing(subdomain,pubkey,svc_type):
     logging.info(f'• Create ignored, already exists: {subdomain} / {pubkey}')
     response = {'action':'create',
         'debug':None,
+        'alias':'null',
         'error':0,
         'subdomain':subdomain,
         'svc_type':svc_type,
