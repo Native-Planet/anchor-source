@@ -118,7 +118,8 @@ def retrieve_info():
                 svc_object = {'url': f'{subd}.{root_domain}',
                 'status': row['status'],
                 'svc_type': row['svc_type'],
-                'port': row['port']}
+                'port': row['port'],
+                'alias':'null'}
                 subdomains.append(svc_object)
         else:
             subdomains = []
