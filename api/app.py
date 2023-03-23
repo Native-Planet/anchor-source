@@ -119,7 +119,7 @@ def retrieve_info():
                 'status': row['status'],
                 'svc_type': row['svc_type'],
                 'port': row['port'],
-                'alias':'null'}
+                'alias':f'{subd}.{root_domain}'}
                 subdomains.append(svc_object)
         else:
             subdomains = []
@@ -173,7 +173,8 @@ def add_anchor():
 # Route to create anchor instance record
 @app.route('/v1/create/alias', methods=['POST'])
 def add_alias():
-    return 'ok',200
+    result = { 'error': 0 }
+    return jsonify(result)
 
 # Route to delete a registered service
 @app.route('/v1/delete', methods=['POST'])
