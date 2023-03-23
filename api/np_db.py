@@ -161,6 +161,16 @@ def nul_value(db,key,lookup,identifier):
     conn.commit()
     logging.info(f"• [DB:{db}] {identifier} NULL {key} @ {timestamp}")
 
+# Delete services
+def delete_svc(key,value):
+    logging.info(f'[DB:services] DELETE {key}: {value}')
+    conn = sqlite3.connect(db_path, isolation_level=None)
+    cur = conn.cursor()
+    query = f'DELETE FROM services WHERE {key} is "{value}";'
+    cur.execute(query)
+    conn.commit()
+    return True
+
 
 
 # █▀▄ █▄░█ █▀
@@ -526,7 +536,6 @@ def delete_service(subdomain,pubkey,svc_type):
         response['code'] = 400
         response['debug'] = 'Service is not registered'
     return response
-
 
 # Determine random unused port for service
 def port_gen(svc_type):
