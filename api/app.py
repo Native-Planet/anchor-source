@@ -169,6 +169,12 @@ def add_anchor():
         response = np_db.invalid_fail(subdomain,pubkey,svc_type,validation)
         return jsonify(response)
 
+
+# Route to create anchor instance record
+@app.route('/v1/create/alias', methods=['POST'])
+def add_alias():
+    return 'ok',200
+
 # Route to delete a registered service
 @app.route('/v1/delete', methods=['POST'])
 def del_svc():
