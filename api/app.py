@@ -132,8 +132,15 @@ def retrieve_info():
     'status':status,
     'subdomains':subdomains,
     'ongoing':1,
+    'region':'Self-hosted',
     'lease': np_db.lease}
     return jsonify(response),reqstatus
+    
+# Route to create anchor instance record
+@app.route('/v1/regions', methods=['get'])
+def get_region():
+    response = {'anchor': {'Self-hosted':'Self-hosted anchor service'}}
+    return jsonify(response)
 
 # Route to create anchor instance record
 @app.route('/v1/create', methods=['POST'])
